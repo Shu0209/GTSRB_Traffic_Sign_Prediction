@@ -1,5 +1,7 @@
 traffic_env/
-traffic_data/
+Meta/
+Test/
+Train/
 uploads/
 
 # Byte-compiled / optimized / DLL files
