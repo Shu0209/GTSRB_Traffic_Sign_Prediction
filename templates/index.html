@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Traffic Sign Classifier</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #f8fafc;
+      letter-spacing: -0.5px;
+    }
+
+    header p {
+      color: #94a3b8;
+      margin-top: 0.4rem;
+      font-size: 0.95rem;
+    }
+
+    .status-badge {
+      display: inline-block;
+      margin-top: 0.6rem;
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .status-ready   { background: #166534; color: #bbf7d0; }
+    .status-nomodel { background: #7f1d1d; color: #fecaca; }
+
+    .card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 16px;
+      padding: 2rem;
+      width: 100%;
+      max-width: 560px;
+      margin-bottom: 1.5rem;
+    }
+
+    /* Drop zone */
+    #drop-zone {
+      border: 2px dashed #475569;
+      border-radius: 12px;
+      padding: 2.5rem 1rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    #drop-zone:hover, #drop-zone.dragover {
+      border-color: #6366f1;
+      background: rgba(99, 102, 241, 0.06);
+    }
+
+    #drop-zone svg { margin-bottom: 0.75rem; opacity: 0.6; }
+
+    #drop-zone p   { color: #94a3b8; font-size: 0.9rem; }
+    #drop-zone span { color: #6366f1; font-weight: 600; cursor: pointer; }
+    #drop-zone span:hover { text-decoration: underline; }
+
+    #file-input { display: none; }
+
+    /* Preview */
+    #preview-wrap {
+      display: none;
+      margin-top: 1.25rem;
+      text-align: center;
+    }
+
+    #preview-wrap img {
+      max-width: 100%;
+      max-height: 200px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      image-rendering: pixelated;
+    }
+
+    #file-name {
+      margin-top: 0.5rem;
+      font-size: 0.8rem;
+      color: #64748b;
+    }
+
+    /* Button */
+    #predict-btn {
+      display: block;
+      width: 100%;
+      margin-top: 1.25rem;
+      padding: 0.75rem;
+      background: #6366f1;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.2s, opacity 0.2s;
+    }
+
+    #predict-btn:hover:not(:disabled) { background: #4f46e5; }
+    #predict-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* Results */
+    #result-card {
+      display: none;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 16px;
+      padding: 2rem;
+      width: 100%;
+      max-width: 560px;
+      margin-bottom: 1.5rem;
+    }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .result-icon {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: rgba(99,102,241,0.15);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem;
+      flex-shrink: 0;
+    }
+
+    .result-label { font-size: 1.2rem; font-weight: 700; color: #f1f5f9; }
+    .result-sub   { font-size: 0.8rem; color: #64748b; margin-top: 0.15rem; }
+
+    .confidence-bar-wrap {
+      background: #0f172a;
+      border-radius: 999px;
+      height: 8px;
+      overflow: hidden;
+      margin-top: 0.75rem;
+    }
+
+    .confidence-bar {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #6366f1, #818cf8);
+      transition: width 0.6s ease;
+    }
+
+    .confidence-text { font-size: 0.85rem; color: #94a3b8; margin-top: 0.4rem; }
+
+    h3 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.06em; color: #64748b; margin-bottom: 0.75rem; margin-top: 1.5rem; }
+
+    .top5-list { list-style: none; }
+    .top5-list li {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.45rem 0;
+      border-bottom: 1px solid #1e293b;
+      font-size: 0.88rem;
+    }
+
+    .top5-list li:last-child { border-bottom: none; }
+
+    .top5-rank {
+      width: 22px; height: 22px; border-radius: 50%;
+      background: #0f172a; color: #475569;
+      font-size: 0.7rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .top5-name { flex: 1; color: #cbd5e1; }
+
+    .top5-pct {
+      font-weight: 600;
+      color: #818cf8;
+      min-width: 48px;
+      text-align: right;
+    }
+
+    /* Error */
+    #error-box {
+      display: none;
+      background: #450a0a;
+      border: 1px solid #7f1d1d;
+      border-radius: 10px;
+      padding: 0.9rem 1rem;
+      color: #fca5a5;
+      font-size: 0.88rem;
+      margin-top: 1rem;
+    }
+
+    /* Spinner */
+    .spinner {
+      display: inline-block;
+      width: 18px; height: 18px;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    footer {
+      color: #334155;
+      font-size: 0.78rem;
+      margin-top: auto;
+      padding-top: 2rem;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🚦 Traffic Sign Classifier</h1>
+  <p>Upload a traffic sign image to get a prediction from the CNN model.</p>
+  <span class="status-badge {{ 'status-ready' if model_ready else 'status-nomodel' }}">
+    {{ 'Model Ready' if model_ready else 'Model Not Loaded' }}
+  </span>
+</header>
+
+<div class="card">
+  <div id="drop-zone">
+    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24"
+         fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+      <polyline points="17 8 12 3 7 8"/>
+      <line x1="12" y1="3" x2="12" y2="15"/>
+    </svg>
+    <p>Drag &amp; drop an image here, or <span id="browse-link">browse</span></p>
+    <p style="font-size:0.75rem; margin-top:0.35rem;">PNG, JPG, PPM, BMP, WEBP — max 5 MB</p>
+  </div>
+  <input type="file" id="file-input" accept=".png,.jpg,.jpeg,.ppm,.bmp,.webp" />
+
+  <div id="preview-wrap">
+    <img id="preview-img" src="" alt="Preview" />
+    <p id="file-name"></p>
+  </div>
+
+  <div id="error-box"></div>
+
+  <button id="predict-btn" disabled>Predict</button>
+</div>
+
+<div id="result-card">
+  <div class="result-header">
+    <div class="result-icon">🪧</div>
+    <div>
+      <div class="result-label" id="result-label">—</div>
+      <div class="result-sub" id="result-class">Class ID: —</div>
+    </div>
+  </div>
+
+  <div class="confidence-bar-wrap">
+    <div class="confidence-bar" id="conf-bar" style="width:0%"></div>
+  </div>
+  <div class="confidence-text" id="conf-text">Confidence: —</div>
+
+  <h3>Top 5 Predictions</h3>
+  <ul class="top5-list" id="top5-list"></ul>
+</div>
+
+<footer>Traffic Sign Recognition · GTSRB · 43 Classes</footer>
+
+<script>
+  const dropZone    = document.getElementById('drop-zone');
+  const fileInput   = document.getElementById('file-input');
+  const browseLink  = document.getElementById('browse-link');
+  const previewWrap = document.getElementById('preview-wrap');
+  const previewImg  = document.getElementById('preview-img');
+  const fileNameEl  = document.getElementById('file-name');
+  const predictBtn  = document.getElementById('predict-btn');
+  const resultCard  = document.getElementById('result-card');
+  const errorBox    = document.getElementById('error-box');
+
+  let selectedFile = null;
+
+  browseLink.addEventListener('click', () => fileInput.click());
+  dropZone.addEventListener('click', () => fileInput.click());
+
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+  });
+
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files.length) handleFile(fileInput.files[0]);
+  });
+
+  function handleFile(file) {
+    selectedFile = file;
+    fileNameEl.textContent = file.name;
+    previewImg.src = URL.createObjectURL(file);
+    previewWrap.style.display = 'block';
+    predictBtn.disabled = false;
+    resultCard.style.display = 'none';
+    errorBox.style.display = 'none';
+  }
+
+  predictBtn.addEventListener('click', async () => {
+    if (!selectedFile) return;
+
+    predictBtn.disabled = true;
+    predictBtn.innerHTML = '<span class="spinner"></span> Predicting…';
+    resultCard.style.display = 'none';
+    errorBox.style.display = 'none';
+
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+
+    try {
+      const res  = await fetch('/predict', { method: 'POST', body: formData });
+      const data = await res.json();
+
+      if (!res.ok || data.error) {
+        showError(data.error || 'Unexpected error from server.');
+        return;
+      }
+
+      // Fill result card
+      document.getElementById('result-label').textContent  = data.prediction.label;
+      document.getElementById('result-class').textContent  = `Class ID: ${data.prediction.class_id}`;
+      document.getElementById('conf-bar').style.width      = `${data.prediction.confidence}%`;
+      document.getElementById('conf-text').textContent     = `Confidence: ${data.prediction.confidence}%`;
+
+      const list = document.getElementById('top5-list');
+      list.innerHTML = '';
+      data.top5.forEach((item, idx) => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <span class="top5-rank">${idx + 1}</span>
+          <span class="top5-name">${item.label}</span>
+          <span class="top5-pct">${item.confidence}%</span>
+        `;
+        list.appendChild(li);
+      });
+
+      resultCard.style.display = 'block';
+    } catch (err) {
+      showError('Network error: ' + err.message);
+    } finally {
+      predictBtn.disabled = false;
+      predictBtn.innerHTML = 'Predict';
+    }
+  });
+
+  function showError(msg) {
+    errorBox.textContent = '⚠ ' + msg;
+    errorBox.style.display = 'block';
+  }
+</script>
+</body>
+</html>
