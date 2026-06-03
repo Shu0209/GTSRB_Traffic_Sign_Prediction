@@ -24,6 +24,22 @@ label_map = {}
 
 def load_resources():
     global model, label_map
+
+    global model, label_map
+
+    print("=" * 50)
+    print("Current Directory:", os.getcwd())
+    print("MODEL_PATH:", MODEL_PATH)
+    print("Exists:", os.path.exists(MODEL_PATH))
+    print("=" * 50)
+
+    try:
+        model = load_model(MODEL_PATH)
+        print("[SUCCESS] Model loaded")
+    except Exception as e:
+        print("[ERROR]", e)
+
+        
     if os.path.exists(MODEL_PATH):
         model = load_model(MODEL_PATH)
         print(f"[INFO] Model loaded from {MODEL_PATH}")
