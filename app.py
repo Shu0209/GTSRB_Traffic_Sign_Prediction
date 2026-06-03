@@ -106,8 +106,8 @@ def predict():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+load_resources()
 if __name__ == "__main__":
-    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-    load_resources()
+    
     app.run(debug=True, host="0.0.0.0", port=5000)
